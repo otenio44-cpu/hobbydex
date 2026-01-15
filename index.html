@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>HobbyDEX | O Inventário da sua Diversão</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    
+    <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="./favicon-16x16.png">
+
+    <link rel="manifest" href="./manifest.json">
+    <meta name="theme-color" content="#0f1115">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+
+    <div id="toast-container"></div>
+
+    <div class="app-container">
+        <aside class="sidebar" id="sidebar">
+            <div class="brand">
+                <div class="logo-stack-icon">
+                    <div class="stack-card c-back"></div>
+                    <div class="stack-card c-mid"></div>
+                    <div class="stack-card c-front"></div>
+                </div>
+                <div class="brand-text-col">
+                    <div class="logo-title">
+                        Hobby<span class="dex-neon">DEX</span>
+                    </div>
+                    <span class="logo-slogan">O inventário da sua diversão</span>
+                </div>
+            </div>
+            
+            <nav class="menu">
+                <button class="menu-item" onclick="loadCommunityFeed()"><i class="fa-solid fa-users"></i> Comunidade</button>
+                <div class="menu-separator" style="height:1px; background:var(--border); margin: 10px 0;"></div>
+                <button class="menu-item active" onclick="filterItems('all')"><i class="fa-solid fa-layer-group"></i> Minha Lista</button>
+                <button class="menu-item" onclick="filterItems('filmes')"><i class="fa-solid fa-film"></i> Filmes</button>
+                <button class="menu-item" onclick="filterItems('series')"><i class="fa-solid fa-tv"></i> Séries</button>
+                <button class="menu-item" onclick="filterItems('jogos')"><i class="fa-solid fa-ghost"></i> Jogos</button>
+                <button class="menu-item" onclick="filterItems('livros')"><i class="fa-solid fa-book-open"></i> Livros</button>
+                
+                <div class="menu-separator" style="height:1px; background:var(--border); margin: 15px 0;"></div>
+                <div class="lists-header">
+                    <span class="section-label" style="margin:0">Minhas Coleções</span>
+                    <button onclick="openCollectionModal()" class="btn-add-list" title="Nova Coleção"><i class="fa-solid fa-plus"></i></button>
+                </div>
+                <div id="customListsMenu" class="menu compact-menu"></div>
+            </nav>
+
+            <div style="padding: 0 20px; margin-top: auto; margin-bottom: 10px;">
+                <button onclick="pickRandom()" class="btn-dice">
+                    <i class="fa-solid fa-dice"></i> O que fazer hoje?
+                </button>
+            </div>
+
+            <div style="margin-top:10px; margin-bottom: 20px; font-size:0.6rem; color:var(--text-muted); text-align:center; opacity:0.5;">
+                Dados por TMDB • RAWG • Google
+            </div>
+
+            <div class="user-panel">
+                <div id="userInfo" class="user-info" style="display: none;">
+                    <div class="user-details">
+                        <span id="userName">Visitante</span>
+                        <div style="display:flex; gap:10px">
+                            <button onclick="openProfile()" class="btn-link" title="Meus Gostos"><i class="fa-solid fa-user-astronaut"></i> Perfil</button>
+                            <button onclick="exportData()" class="btn-link" title="Backup"><i class="fa-solid fa-download"></i> CSV</button>
+                        </div>
+                    </div>
+                    <button id="logoutBtn" class="btn-icon" title="Sair"><i class="fa-solid fa-right-from-bracket"></i></button>
+                </div>
+                <button id="loginBtn" class="btn-login"><i class="fa-brands fa-google"></i> Entrar com Google</button>
+            </div>
+        </aside>
+
+        <main class="content">
+            <header class="top-bar">
+                <button class="mobile-toggle" onclick="toggleSidebar()"><i class="fa-solid fa-bars"></i></button>
+                
+                <div class="status-tabs-container mobile-hide">
+                    <button class="status-tab active" onclick="filterStatus('all')">Todos</button>
+                    <button class="status-tab" onclick="filterStatus('Assistindo')"><span class="dot-indicator running"></span> Em Andamento</button>
+                    <button class="status-tab" onclick="filterStatus('Começando')"><span class="dot-indicator waiting"></span> Na Fila</button>
+                    <button class="status-tab" onclick="filterStatus('Finalizado')"><span class="dot-indicator done"></span> Concluídos</button>
+                </div>
+
+                <div class="header-controls">
+                    <div class="sort-box">
+                        <i class="fa-solid fa-sort"></i>
+                        <select id="sortOrder" onchange="render()">
+                            <option value="newest">📅 Recentes</option>
+                            <option value="ratingDesc">⭐ Melhores</option>
+                            <option value="oldest">📆 Antigos</option>
+                        </select>
+                    </div>
+                    <div class="search-bar">
+                        <i class="fa-solid fa-search"></i>
+                        <input type="text" id="localSearch" placeholder="Pesquisar..." oninput="handleLocalSearch()">
+                    </div>
+                </div>
+            </header>
+
+            <section class="stats-grid">
+                <div class="mini-stat-card film-theme"><i class="fa-solid fa-film"></i><div><span class="stat-num" id="count-filmes">0</span><span class="stat-label">Filmes</span></div></div>
+                <div class="mini-stat-card serie-theme"><i class="fa-solid fa-tv"></i><div><span class="stat-num" id="count-series">0</span><span class="stat-label">Séries</span></div></div>
+                <div class="mini-stat-card game-theme"><i class="fa-solid fa-gamepad"></i><div><span class="stat-num" id="count-jogos">0</span><span class="stat-label">Jogos</span></div></div>
+                <div class="mini-stat-card book-theme"><i class="fa-solid fa-book"></i><div><span class="stat-num" id="count-livros">0</span><span class="stat-label">Livros</span></div></div>
+            </section>
+
+            <section class="dashboard-stats">
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <span>Progresso Geral</span>
+                        <span id="progressText">0%</span>
+                    </div>
+                    <div class="progress-track-multi">
+                        <div id="bar-filmes" class="prog-segment film-bg" style="width:0%"></div>
+                        <div id="bar-series" class="prog-segment serie-bg" style="width:0%"></div>
+                        <div id="bar-jogos" class="prog-segment game-bg" style="width:0%"></div>
+                        <div id="bar-livros" class="prog-segment book-bg" style="width:0%"></div>
+                    </div>
+                    <div class="legend">
+                        <span class="dot film-bg"></span> Filmes
+                        <span class="dot serie-bg"></span> Séries
+                        <span class="dot game-bg"></span> Jogos
+                        <span class="dot book-bg"></span> Livros
+                    </div>
+                </div>
+            </section>
+
+            <section class="input-section-unified">
+                <div class="glass-card smart-add-card">
+                    <div class="card-header">
+                        <h3><i class="fa-solid fa-compass"></i> Nova Jornada</h3>
+                    </div>
+                    <div class="smart-search-row">
+                        <select id="smartCategory" class="category-select">
+                            <option value="filmes">🎬 Filme</option>
+                            <option value="series">📺 Série</option>
+                            <option value="jogos">🎮 Jogo</option>
+                            <option value="livros">📚 Livro</option>
+                        </select>
+                        <div class="search-wrapper">
+                            <input type="text" id="smartSearchInput" placeholder="Digite para buscar...">
+                            <button onclick="searchApi()" class="btn-search-icon"><i class="fa-solid fa-magnifying-glass"></i></button>
+                        </div>
+                    </div>
+                    <div id="apiResults" class="api-results-container"></div>
+                    <form id="itemForm" class="details-form">
+                        <input id="title" type="text" style="display:none">
+                        <input type="hidden" id="overviewInput">
+                        
+                        <div class="details-row">
+                            <div class="input-with-icon">
+                                <i class="fa-solid fa-image"></i>
+                                <input id="image" type="url" placeholder="URL da Capa">
+                            </div>
+                            <select id="status">
+                                <option value="Começando">⏳ Na Fila</option>
+                                <option value="Assistindo">🔥 Em Andamento</option>
+                                <option value="Finalizado">🏆 Concluído</option>
+                            </select>
+                            <button type="submit" class="btn-submit-large"><i class="fa-solid fa-floppy-disk"></i> Salvar</button>
+                        </div>
+                        <input type="hidden" id="reviewInput">
+                    </form>
+                </div>
+            </section>
+
+            <div id="list" class="items-grid"></div>
+        </main>
+    </div>
+
+    <div id="oracleModal" class="modal-overlay" style="display: none;">
+        <div class="glass-card modal-content">
+            <button class="close-modal" onclick="closeOracle()"><i class="fa-solid fa-times"></i></button>
+            <div class="oracle-header">
+                <h2>🔮 O Oráculo Sugere...</h2>
+                <p>Escolha uma categoria para receber uma indicação!</p>
+            </div>
+            <div class="oracle-buttons">
+                <button onclick="getRecommendation('movie')" class="btn-oracle film-theme"><i class="fa-solid fa-film"></i> Filme</button>
+                <button onclick="getRecommendation('tv')" class="btn-oracle serie-theme"><i class="fa-solid fa-tv"></i> Série</button>
+                <button onclick="getRecommendation('game')" class="btn-oracle game-theme"><i class="fa-solid fa-gamepad"></i> Jogo</button>
+                <button onclick="getRecommendation('book')" class="btn-oracle book-theme"><i class="fa-solid fa-book"></i> Livro</button>
+            </div>
+            <div id="oracleResult" class="oracle-result-box" style="display: none;"></div>
+        </div>
+    </div>
+
+    <div id="profileModal" class="modal-overlay" style="display: none; align-items: center;">
+        <div class="glass-card modal-content profile-slim-card">
+            <button class="close-modal" onclick="closeProfile()" style="color: white; z-index: 10;"><i class="fa-solid fa-times"></i></button>
+            <div class="profile-header-bg">
+                <div class="profile-avatar-area"><i class="fa-solid fa-user-astronaut"></i></div>
+                <h2 id="profileNameDisplay">Visitante</h2>
+                <span class="profile-subtitle">Explorador do HobbyDEX</span>
+            </div>
+            <div class="profile-body-scroll">
+                <div class="stats-row-compact">
+                    <div class="stat-pill"><i class="fa-solid fa-clock" style="color:var(--accent)"></i><span id="totalHours">0h</span></div>
+                    <div class="stat-pill"><i class="fa-solid fa-check-double" style="color:var(--success)"></i><span id="totalCompleted">0</span></div>
+                </div>
+                <div class="section-label">Conquistas</div>
+                <div id="achievementsGrid" class="achievements-grid-mini"></div>
+                <div class="divider-line"></div>
+                <div class="section-label">Preferências</div>
+                <div class="prefs-group">
+                    <span class="group-icon"><i class="fa-solid fa-film"></i></span>
+                    <div class="tags-wrapper compact" id="movieGenresList"></div>
+                </div>
+                <div class="prefs-group">
+                    <span class="group-icon"><i class="fa-solid fa-gamepad"></i></span>
+                    <div class="tags-wrapper compact" id="gameGenresList"></div>
+                </div>
+                <div class="prefs-group">
+                    <span class="group-icon"><i class="fa-solid fa-book"></i></span>
+                    <div class="tags-wrapper compact" id="bookGenresList"></div>
+                </div>
+            </div>
+            <div class="profile-footer">
+                <button onclick="saveProfile()" class="btn-submit-large">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="detailsModal" class="modal-overlay" style="display: none; align-items: center;">
+        <div class="glass-card modal-content cinematic-modal">
+            <button class="close-modal" onclick="closeDetails()"><i class="fa-solid fa-times"></i></button>
+            <div id="cineBackground" class="cine-bg"></div>
+            <div class="cine-content">
+                <div class="cine-poster"><img id="cineImage" src="" alt="Poster"></div>
+                <div class="cine-info">
+                    <span id="cineCategory" class="cine-tag">Categoria</span>
+                    <h2 id="cineTitle">Título</h2>
+                    <div class="cine-meta">
+                        <span id="cineDate"></span> <span id="cineStatus" class="cine-status"></span>
+                    </div>
+
+                    <div class="focus-timer-box">
+                        <div class="timer-display" id="focusTimerDisplay">00:00</div>
+                        <div class="timer-controls">
+                            <button id="btnToggleTimer" class="btn-mini-focus" onclick="toggleFocusTimer()"><i class="fa-solid fa-play"></i> Focar</button>
+                            <span id="focusSessionInfo" style="font-size:0.8rem; color:var(--text-muted); display:none">Sessão ativa</span>
+                        </div>
+                    </div>
+
+                    <p id="cineOverview" class="cine-desc"></p>
+                    <div id="cineProviders" class="providers-row"></div>
+                    <div class="cine-actions">
+                        <button id="btnDeleteDetail" class="btn-dice" style="background: var(--danger); color:white; border:none; width:auto;"><i class="fa-solid fa-trash"></i></button>
+                        <button onclick="closeDetails()" class="btn-submit-large" style="width: auto; padding: 0 30px;">Fechar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="collectionModal" class="modal-overlay" style="display: none;">
+        <div class="glass-card modal-content" style="max-width: 400px;">
+            <button class="close-modal" onclick="closeCollectionModal()"><i class="fa-solid fa-times"></i></button>
+            <div class="card-header">
+                <h3>📂 Nova Coleção</h3>
+            </div>
+            <form id="collectionForm" onsubmit="saveCollection(event)" style="display:flex; flex-direction:column; gap:15px; margin-top:20px;">
+                <input type="text" id="collectionName" placeholder="Nome da lista (ex: Terror 80s)" class="review-area" style="height:50px; color:white; font-size:1rem;" required>
+                <div style="display:flex; gap:10px; justify-content:center;">
+                    <button type="button" class="btn-dice" style="width:50px; background:var(--color-film)" onclick="selectListColor('film')"><i class="fa-solid fa-circle"></i></button>
+                    <button type="button" class="btn-dice" style="width:50px; background:var(--color-serie)" onclick="selectListColor('serie')"><i class="fa-solid fa-circle"></i></button>
+                    <button type="button" class="btn-dice" style="width:50px; background:var(--color-game)" onclick="selectListColor('game')"><i class="fa-solid fa-circle"></i></button>
+                    <button type="button" class="btn-dice" style="width:50px; background:var(--color-book)" onclick="selectListColor('book')"><i class="fa-solid fa-circle"></i></button>
+                </div>
+                <input type="hidden" id="collectionColor" value="film">
+                <button type="submit" class="btn-submit-large">Criar Lista</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="manageListsModal" class="modal-overlay" style="display: none;">
+        <div class="glass-card modal-content" style="max-width: 350px;">
+            <button class="close-modal" onclick="document.getElementById('manageListsModal').style.display='none'"><i class="fa-solid fa-times"></i></button>
+            <h3>Gerenciar Listas</h3>
+            <p id="manageItemTitle" style="color:var(--text-muted); font-size:0.9rem; margin-bottom:15px;"></p>
+            <div id="checklistContainer" style="text-align:left; display:flex; flex-direction:column; gap:10px;"></div>
+            <button onclick="document.getElementById('manageListsModal').style.display='none'" class="btn-submit-large" style="margin-top:20px">Concluir</button>
+        </div>
+    </div>
+
+    <div id="battleModal" class="modal-overlay" style="display: none;">
+        <div class="glass-card modal-content" style="max-width: 500px;">
+            <button class="close-modal" onclick="closeBattle()"><i class="fa-solid fa-times"></i></button>
+            <div class="battle-header">
+                <h2 style="color:var(--color-film)">⚔️ Batalha de Perfis</h2>
+                <div class="battle-vs-badge">VS</div>
+            </div>
+            
+            <div class="battle-players">
+                <div class="player-col">
+                    <div class="player-avatar" id="battleMyAvatar"><i class="fa-solid fa-user"></i></div>
+                    <span id="battleMyName">Eu</span>
+                </div>
+                <div class="player-col">
+                    <div class="player-avatar" id="battleOpAvatar"><i class="fa-solid fa-user-astronaut"></i></div>
+                    <span id="battleOpName">Oponente</span>
+                </div>
+            </div>
+
+            <div class="battle-stats-container" id="battleStats"></div>
+
+            <div class="battle-result">
+                <h3>Compatibilidade</h3>
+                <div class="compatibility-bar">
+                    <div class="compatibility-fill" id="battleCompatFill" style="width:0%"></div>
+                </div>
+                <span id="battleCompatText">0%</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('HobbyDEX SW registrado!', reg))
+                    .catch(err => console.log('Falha no SW:', err));
+            });
+        }
+    </script>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, collection, addDoc, setDoc, getDoc, getDocs, query, where, doc, deleteDoc, updateDoc, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        
+        const firebaseConfig = { apiKey: "AIzaSyAH9H3sqyytQfAKzETFFrPjxbRzu-vSsXE", authDomain: "questlog-c51dd.firebaseapp.com", projectId: "questlog-c51dd", storageBucket: "questlog-c51dd.firebasestorage.app", messagingSenderId: "409235542116", appId: "1:409235542116:web:b5331f00fc6a73b3ac8f71" };
+        const app = initializeApp(firebaseConfig);
+        
+        window.db = getFirestore(app); 
+        window.auth = getAuth(app); 
+        window.provider = new GoogleAuthProvider();
+        
+        window.fbOps = { collection, addDoc, setDoc, getDoc, getDocs, query, where, doc, deleteDoc, updateDoc, orderBy, limit, signInWithPopup, onAuthStateChanged, signOut };
+    </script>
+    <script src="script.js" defer></script>
+</body>
+</html>
