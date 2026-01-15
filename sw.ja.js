@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hobbydex-v1-icons';
+const CACHE_NAME = 'hobbydex-v2'; // Mude o número aqui
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
